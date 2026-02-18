@@ -632,13 +632,12 @@ export default function EisenhowerTaskGrid() {
                           {projectId === "unassigned" ? "Unassigned" : getProjectName(projectId)}
                         </h3>
                         {projectTasks.map((task) => (
-                          <TimelineItem key={task.id}>
-                            <div>
-                              <h4>{task.title}</h4>
-                              <p>{task.description}</p>
-                              <p>{task.createdAt.toLocaleString()}</p>
-                            </div>
-                          </TimelineItem>
+                          <TimelineItem 
+                            key={task.id}
+                            title={task.title}
+                            description={task.description}
+                            date={task.createdAt.toLocaleString()}
+                          />
                         ))}
                       </React.Fragment>
                     ))}
