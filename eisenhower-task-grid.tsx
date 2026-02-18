@@ -1,8 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
+import React, { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useDraggable } from "@/hooks/useDraggable"
 import {
   login,
   logout,
@@ -80,148 +79,43 @@ interface GridConfig {
 }
 
 function DraggableTask({ task, onDragEnd, onClick }: DraggableTaskProps) {
-  const [isDragging, setIsDragging] = useState(false)
-  const [moveDirection, setMoveDirection] = useState<string | null>(null)
-  const [tiltAngle, setTiltAngle] = useState(0)
-  const [isWobbling, setIsWobbling] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const lastPosition = useRef<Position>(task.position)
-  const lastMoveTime = useRef<number>(0)
-  const moveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const dragStartPosition = useRef<Position | null>(null)
+  const { position, dragState, containerRef, startDrag, getWobbleAnimation } = useDraggable(
+    task.position,
+    {
+      onDragEnd: (pos) => onDragEnd(task.id, pos),
+      onPositionChange: (pos) => onDragEnd(task.id, pos),
+    },
+  )
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging && ref.current) {
-        const currentTime = Date.now()
-        const rect = ref.current.parentElement!.getBoundingClientRect()
-        const newX = ((e.clientX - rect.left) / rect.width) * 100
-        const newY = ((e.clientY - rect.top) / rect.height) * 100
-
-        const dx = newX - lastPosition.current.x
-        const dy = newY - lastPosition.current.y
-        const timeDiff = currentTime - lastMoveTime.current
-
-        const velocity = Math.sqrt(dx * dx + dy * dy) / timeDiff
-        const newTiltAngle = Math.min(Math.max(velocity * 200, 1), 15)
-        setTiltAngle(newTiltAngle)
-
-        if (Math.abs(dx) > Math.abs(dy)) {
-          setMoveDirection(dx > 0 ? "right" : "left")
-        } else {
-          setMoveDirection(dy > 0 ? "down" : "up")
-        }
-
-        lastPosition.current = { x: newX, y: newY }
-        lastMoveTime.current = currentTime
-
-        if (moveTimeoutRef.current) {
-          clearTimeout(moveTimeoutRef.current)
-        }
-        moveTimeoutRef.current = setTimeout(() => {
-          setMoveDirection(null)
-          setTiltAngle(0)
-        }, 50)
-
-        onDragEnd(task.id, { x: newX, y: newY })
-      }
-    }
-
-    const handleMouseUp = (e: MouseEvent) => {
-      if (isDragging) {
-        const rect = ref.current!.parentElement!.getBoundingClientRect()
-        const endX = ((e.clientX - rect.left) / rect.width) * 100
-        const endY = ((e.clientY - rect.top) / rect.height) * 100
-
-        const distance = Math.sqrt(
-          Math.pow(endX - dragStartPosition.current!.x, 2) + Math.pow(endY - dragStartPosition.current!.y, 2),
-        )
-
-        if (distance < 5) {
-          // If the distance is small, consider it a click
-          onClick(task)
-        }
-      }
-
-      setIsDragging(false)
-      setMoveDirection(null)
-      setTiltAngle(0)
-      if (moveTimeoutRef.current) {
-        clearTimeout(moveTimeoutRef.current)
-      }
-      setIsWobbling(true)
-      setTimeout(() => setIsWobbling(false), 300)
-      document.body.classList.remove("dragging")
-    }
-
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove)
-      window.addEventListener("mouseup", handleMouseUp)
-    }
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove)
-      window.removeEventListener("mouseup", handleMouseUp)
-      if (moveTimeoutRef.current) {
-        clearTimeout(moveTimeoutRef.current)
-      }
-    }
-  }, [isDragging, onDragEnd, onClick]) // Removed task.id from dependency array
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-    setIsWobbling(false)
-    lastPosition.current = task.position
-    lastMoveTime.current = Date.now()
-    document.body.classList.add("dragging")
-
-    const rect = ref.current!.parentElement!.getBoundingClientRect()
-    dragStartPosition.current = {
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-    }
-  }
-
-  const getWobbleAnimation = () => {
-    if (isWobbling) return "animate-lightWobble"
-    switch (moveDirection) {
-      case "left":
-        return "animate-wobbleLeft"
-      case "right":
-        return "animate-wobbleRight"
-      case "up":
-        return "animate-wobbleUp"
-      case "down":
-        return "animate-wobbleDown"
-      default:
-        return ""
-    }
-  }
+  const animationClass = getWobbleAnimation()
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          ref={ref}
-          className={`absolute cursor-move ${getWobbleAnimation()}`}
-          style={
-            {
-              left: `${task.position.x}%`,
-              top: `${task.position.y}%`,
-              transform: `translate(-50%, -50%) ${isDragging ? "scale(1.25)" : "scale(1)"}`,
-              transition: "transform 0.3s",
-              "--tilt-angle": `${moveDirection === "left" || moveDirection === "up" ? -tiltAngle : tiltAngle}deg`,
-            } as React.CSSProperties
-          }
-          onMouseDown={handleMouseDown}
+          ref={containerRef}
+          className={`absolute pointer-events-auto ${animationClass}`}
+          style={{
+            left: `${position.x}%`,
+            top: `${position.y}%`,
+          }}
         >
           <div
-            className="text-sm font-medium select-none px-3 py-1 rounded-full relative whitespace-nowrap"
+            onMouseDown={startDrag}
+            className="transform -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-sm font-medium select-none px-3 py-1 rounded-full relative whitespace-nowrap"
             style={{
               backgroundColor: task.color,
               color: "#000",
               textAlign: "center",
+            }}
+            onClick={() => {
+              // Only trigger click if small distance moved
+              const distance = Math.sqrt(
+                Math.pow(position.x - task.position.x, 2) + Math.pow(position.y - task.position.y, 2),
+              )
+              if (distance < 5) {
+                onClick(task)
+              }
             }}
           >
             {task.title}
