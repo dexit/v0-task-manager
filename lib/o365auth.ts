@@ -3,6 +3,7 @@ import {
   type AccountInfo,
   InteractionRequiredAuthError,
   BrowserAuthError,
+  InteractionType,
 } from "@azure/msal-browser"
 import { Client } from "@microsoft/microsoft-graph-client"
 import { AuthCodeMSALBrowserAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/authCodeMsalBrowser"
@@ -110,7 +111,7 @@ export async function getAuthenticatedClient(): Promise<Client> {
   const authProvider = new AuthCodeMSALBrowserAuthenticationProvider(instance, {
     account: account,
     scopes: loginRequest.scopes,
-    interactionType: "popup",
+    interactionType: InteractionType.Popup,
   })
 
   return Client.initWithMiddleware({
