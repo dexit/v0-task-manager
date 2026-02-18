@@ -408,7 +408,7 @@ export default function EisenhowerTaskGrid() {
   return (
     <TooltipProvider>
       <div
-        className={`min-h-screen w-full bg-background text-foreground ${GeistSans.variable} ${GeistMono.variable} font-sans`}
+        className="min-h-screen w-full bg-background text-foreground font-sans"
       >
         <style jsx global>{`
           body.dragging * {
