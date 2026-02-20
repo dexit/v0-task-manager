@@ -13,12 +13,12 @@ let isInteractionInProgress = false
 
 const msalConfig = {
   auth: {
-    clientId: process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID!,
-    authority: `https://login.microsoftonline.com/${process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID}`,
-    redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI,
+    clientId: process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID || "dummy-client-id",
+    authority: `https://login.microsoftonline.com/${process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID || "common"}`,
+    redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI || (typeof window !== 'undefined' ? window.location.origin : "http://localhost:3000"),
   },
   cache: {
-    cacheLocation: "sessionStorage",
+    cacheLocation: "sessionStorage" as const,
     storeAuthStateInCookie: false,
   },
 }
